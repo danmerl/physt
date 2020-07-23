@@ -207,6 +207,35 @@ class PolarHistogram(TransformedHistogramMixin, HistogramND):
     _projection_class_map = {(0,): RadialHistogram, (1,): AzimuthalHistogram}
 
 
+class ActualPolarHistogram(TransformedHistogramMixin, HistogramND):
+    """2D histogram in polar coordinates.
+
+    This is a special case of a 2D histogram with transformed coordinates:
+    - r as radius in the (0, +inf) range
+    - phi as azimuthal angle in the (0, 2*pi) range
+
+    """
+    default_axis_names = ("alt", "az")
+    source_ndim = 2
+
+    @property
+    def bin_sizes(self):
+        sizes = 0.5 * (
+            self.get_bin_right_edges(0) ** 2 - self.get_bin_left_edges(0) ** 2
+        )
+        sizes = np.outer(sizes, self.get_bin_widths(1))
+        return sizes
+
+    @classmethod
+    def _transform_correct_dimension(cls, value):
+        result = np.empty_like(value)
+        result[..., 0] = 91 - value[..., 0]
+        result[..., 1] = (value[..., 1] * np.pi / 180) % (2 * np.pi)
+        return result
+
+    _projection_class_map = {(0,): RadialHistogram, (1,): AzimuthalHistogram}
+
+
 class SphericalSurfaceHistogram(TransformedHistogramMixin, HistogramND):
     """2D histogram in spherical coordinates.
 
@@ -655,5 +684,3 @@ def _prepare_data(data, transformed: bool, klass: Type[TransformedHistogramMixin
     if not transformed:
         data = klass.transform(data)
     return data
-
-
